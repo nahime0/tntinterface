@@ -66,41 +66,6 @@ In alternativa puoi eseguire l'import manualmente:
 node import_csv.js
 ```
 
-## Categorie
-
-| ID | Nome |
-|----|------|
-| 1  | Programmi TV Italiani |
-| 2  | Musica Lossless |
-| 3  | E-book |
-| 4  | Film |
-| 6  | Software Linux |
-| 7  | Animazione Giapponese |
-| 8  | Cartoni Animati |
-| 9  | Software macOS |
-| 10 | Software Windows |
-| 11 | Giochi PC |
-| 12 | Giochi PlayStation |
-| 13 | Varie |
-| 14 | Documentari |
-| 21 | Concerti e Musica Video |
-| 22 | Motorsport |
-| 23 | Teatro e Spettacoli |
-| 24 | Wrestling e Sport Estremi |
-| 25 | Emulatori e ROM |
-| 26 | Giochi Xbox 360 |
-| 27 | Sfondi e Wallpaper |
-| 28 | Giochi da Tavolo |
-| 29 | Serie TV |
-| 30 | Fumetti |
-| 31 | Animazione Storica |
-| 32 | Giochi Wii |
-| 34 | Audiolibri |
-| 35 | Radio e Podcast |
-| 36 | Riviste |
-| 37 | Software Android |
-| 38 | Speciali e Varie |
-
 ## API
 
 | Endpoint | Descrizione |
