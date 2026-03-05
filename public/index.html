@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TNTVillage Archive</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --accent: #e8442a;
+      --accent-dark: #c0321a;
+    }
+    body { background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
+    .navbar { background: #1a1a1a !important; border-bottom: 2px solid var(--accent); }
+    .navbar-brand { color: var(--accent) !important; font-weight: 700; font-size: 1.4rem; }
+    .navbar-brand span { color: #fff; }
+    .search-bar { background: #1a1a1a; border-radius: 12px; padding: 1.5rem; border: 1px solid #2a2a2a; }
+    .form-control, .form-select {
+      background: #252525; border: 1px solid #3a3a3a; color: #e0e0e0;
+      border-radius: 8px;
+    }
+    .form-control:focus, .form-select:focus {
+      background: #2a2a2a; border-color: var(--accent); color: #fff;
+      box-shadow: 0 0 0 0.2rem rgba(232,68,42,0.25);
+    }
+    .form-select option { background: #252525; }
+    .btn-search {
+      background: var(--accent); border: none; color: white; font-weight: 600;
+      border-radius: 8px; padding: 0.5rem 1.5rem;
+    }
+    .btn-search:hover { background: var(--accent-dark); color: white; }
+    .btn-outline-secondary { border-color: #3a3a3a; color: #aaa; }
+    .btn-outline-secondary:hover { background: #2a2a2a; color: #fff; border-color: #555; }
+    .stats-bar { background: #1a1a1a; border-radius: 8px; padding: 0.6rem 1rem;
+                 border: 1px solid #2a2a2a; font-size: 0.85rem; color: #888; }
+    .stats-bar strong { color: var(--accent); }
+    .torrent-card {
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+      padding: 1rem 1.2rem; margin-bottom: 0.6rem; transition: border-color 0.15s;
+    }
+    .torrent-card:hover { border-color: #444; }
+    .torrent-title { font-weight: 600; color: #fff; font-size: 1rem; line-height: 1.3; margin-bottom: 0.2rem; }
+    .torrent-desc { color: #aaa; font-size: 0.85rem; line-height: 1.4; margin-bottom: 0.4rem; }
+    .badge-cat {
+      background: #2a2a2a; color: var(--accent); border: 1px solid #3a3a3a;
+      font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+    }
+    .badge-size { background: #1e3a5f; color: #7cb9ff; font-size: 0.72rem;
+                  padding: 2px 8px; border-radius: 20px; }
+    .badge-author { color: #888; font-size: 0.75rem; }
+    .badge-date { color: #666; font-size: 0.75rem; }
+    .btn-magnet {
+      background: #1e3a1e; border: 1px solid #2a5a2a; color: #7cbf7c;
+      font-size: 0.75rem; padding: 3px 10px; border-radius: 6px; text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-magnet:hover { background: #2a5a2a; color: #aaffaa; }
+    .btn-magnet i { margin-right: 3px; }
+    .btn-star, .btn-downloaded {
+      border: none; background: transparent; cursor: pointer; font-size: 1.1rem;
+      padding: 2px 5px; border-radius: 5px; transition: transform 0.1s;
+      line-height: 1;
+    }
+    .btn-star { color: #555; }
+    .btn-star:hover { color: #f0b429; }
+    .btn-star.active { color: #f0b429; }
+    .btn-downloaded { color: #555; }
+    .btn-downloaded:hover { color: #4caf50; }
+    .btn-downloaded.active { color: #4caf50; }
+    .btn-star:active, .btn-downloaded:active { transform: scale(1.3); }
+    .nav-tabs-custom { border-bottom: 2px solid #2a2a2a; margin-bottom: 1rem; }
+    .nav-tabs-custom .nav-link {
+      color: #888; border: none; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; padding: 0.5rem 1.2rem; border-radius: 0;
+      background: transparent; font-weight: 500;
+    }
+    .nav-tabs-custom .nav-link:hover { color: #ccc; }
+    .nav-tabs-custom .nav-link.active {
+      color: #fff; border-bottom-color: var(--accent); background: transparent;
+    }
+    .nav-tabs-custom .badge { font-size: 0.65rem; vertical-align: middle; }
+    .pagination { gap: 3px; }
+    .page-link { background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa; border-radius: 6px !important; }
+    .page-link:hover { background: #2a2a2a; color: #fff; border-color: #444; }
+    .page-item.active .page-link { background: var(--accent); border-color: var(--accent); color: white; }
+    .page-item.disabled .page-link { background: #111; color: #444; }
+    .loading { text-align: center; padding: 3rem; color: #555; }
+    .empty { text-align: center; padding: 3rem; color: #555; }
+    #results-info { color: #666; font-size: 0.85rem; }
+    .sort-btn { font-size: 0.75rem; }
+    .form-label { color: #aaa; font-size: 0.85rem; margin-bottom: 0.3rem; }
+    @media (max-width: 576px) {
+      .torrent-card { padding: 0.8rem; }
+      .btn-magnet { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/"><i class="bi bi-collection-play-fill me-2"></i>TNT<span>Village</span> Archive</a>
+    <span class="text-muted small d-none d-md-block">Dump 2019-08-30</span>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs-custom mb-3" id="view-tabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-view="all" onclick="switchView('all')">
+        <i class="bi bi-grid me-1"></i>Tutti
+        <span class="badge bg-secondary ms-1" id="tab-count-all">—</span>
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-view="starred" onclick="switchView('starred')">
+        <i class="bi bi-star-fill me-1" style="color:#f0b429"></i>Preferiti
+        <span class="badge ms-1" id="tab-count-starred" style="background:#3a3010;color:#f0b429">0</span>
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-view="downloaded" onclick="switchView('downloaded')">
+        <i class="bi bi-check-circle-fill me-1" style="color:#4caf50"></i>Scaricati
+        <span class="badge ms-1" id="tab-count-downloaded" style="background:#0f2e0f;color:#4caf50">0</span>
+      </button>
+    </li>
+  </ul>
+
+  <!-- Search bar -->
+  <div class="search-bar mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-5">
+        <label class="form-label"><i class="bi bi-search me-1"></i>Cerca</label>
+        <input type="text" id="q" class="form-control" placeholder="Titolo, descrizione, autore..." autocomplete="off">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label"><i class="bi bi-tag me-1"></i>Categoria</label>
+        <select id="cat" class="form-select">
+          <option value="">Tutte le categorie</option>
+        </select>
+      </div>
+      <div class="col-9 col-md-3">
+        <label class="form-label"><i class="bi bi-sort-down me-1"></i>Ordina per</label>
+        <select id="sortby" class="form-select">
+          <option value="data_desc">Data (più recente)</option>
+          <option value="data_asc">Data (più vecchia)</option>
+          <option value="titolo_asc">Titolo (A → Z)</option>
+          <option value="titolo_desc">Titolo (Z → A)</option>
+          <option value="dimensione_desc">Dimensione (maggiore)</option>
+          <option value="dimensione_asc">Dimensione (minore)</option>
+          <option value="autore_asc">Autore (A → Z)</option>
+          <option value="autore_desc">Autore (Z → A)</option>
+        </select>
+      </div>
+      <div class="col-3 col-md-1">
+        <label class="form-label">&nbsp;</label>
+        <button class="btn btn-search w-100" onclick="search(1)">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar d-flex justify-content-between align-items-center mb-3">
+    <span id="results-info">Caricamento...</span>
+    <span>
+      <label class="me-1" style="color:#888;font-size:.8rem;">Per pagina:</label>
+      <select id="per_page" class="form-select d-inline-block" style="width:auto;font-size:.8rem;padding:2px 6px;"
+              onchange="search(1)">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </span>
+  </div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <!-- Pagination -->
+  <nav id="pag-nav" class="mt-3" style="display:none">
+    <ul class="pagination justify-content-center flex-wrap" id="pagination"></ul>
+  </nav>
+
+</div>
+
+<script>
+let currentPage = 1;
+let currentTotal = 0;
+let currentPerPage = 25;
+let currentPages = 1;
+let currentView = 'all';
+
+async function loadStats() {
+  const res = await fetch('/api/stats');
+  const s = await res.json();
+  document.getElementById('tab-count-all').textContent        = s.total.toLocaleString('it');
+  document.getElementById('tab-count-starred').textContent    = s.starred.toLocaleString('it');
+  document.getElementById('tab-count-downloaded').textContent = s.downloaded.toLocaleString('it');
+}
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('#view-tabs .nav-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  search(1);
+}
+
+async function toggleStar(id, btn) {
+  btn.disabled = true;
+  const res = await fetch(`/api/toggle/star/${id}`, { method: 'POST' });
+  const data = await res.json();
+  btn.disabled = false;
+  btn.classList.toggle('active', !!data.starred);
+  btn.textContent = data.starred ? '★' : '☆';
+  btn.title = data.starred ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti';
+  // If we're in starred view and we just un-starred, remove the card
+  if (currentView === 'starred' && !data.starred) {
+    btn.closest('.torrent-card').style.opacity = '0.3';
+    setTimeout(() => search(currentPage), 600);
+  }
+  loadStats();
+}
+
+async function toggleDownloaded(id, btn) {
+  btn.disabled = true;
+  const res = await fetch(`/api/toggle/downloaded/${id}`, { method: 'POST' });
+  const data = await res.json();
+  btn.disabled = false;
+  btn.classList.toggle('active', !!data.downloaded);
+  btn.textContent = data.downloaded ? '✓' : '↓';
+  btn.title = data.downloaded ? 'Segna come non scaricato' : 'Segna come scaricato';
+  // If we're in downloaded view and we just un-marked, remove the card
+  if (currentView === 'downloaded' && !data.downloaded) {
+    btn.closest('.torrent-card').style.opacity = '0.3';
+    setTimeout(() => search(currentPage), 600);
+  }
+  loadStats();
+}
+
+// Load categories into select
+async function loadCategories() {
+  const res = await fetch('/api/categories');
+  const cats = await res.json();
+  cats.sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
+  const sel = document.getElementById('cat');
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.nome} (${c.count.toLocaleString('it')})`;
+    sel.appendChild(opt);
+  });
+}
+
+function getParams() {
+  const [sort, order] = document.getElementById('sortby').value.split('_');
+  return {
+    q:        document.getElementById('q').value.trim(),
+    cat:      document.getElementById('cat').value,
+    sort,
+    order,
+    per_page: document.getElementById('per_page').value,
+    view:     currentView,
+  };
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  return iso.split('T')[0];
+}
+
+function renderResults(data) {
+  currentTotal = data.total;
+  currentPages = data.pages;
+  currentPage  = data.page;
+  currentPerPage = data.per_page;
+
+  const info = document.getElementById('results-info');
+  if (data.total === 0) {
+    info.textContent = 'Nessun risultato trovato.';
+    document.getElementById('results').innerHTML = `
+      <div class="empty"><i class="bi bi-search" style="font-size:2rem;display:block;margin-bottom:.5rem"></i>
+      Nessun torrent trovato per questa ricerca.</div>`;
+    document.getElementById('pag-nav').style.display = 'none';
+    return;
+  }
+
+  const from = (currentPage - 1) * currentPerPage + 1;
+  const to   = Math.min(currentPage * currentPerPage, currentTotal);
+  info.innerHTML = `Risultati <strong style="color:#ccc">${from.toLocaleString('it')}–${to.toLocaleString('it')}</strong> di <strong style="color:var(--accent)">${currentTotal.toLocaleString('it')}</strong>`;
+
+  const html = data.results.map(r => `
+    <div class="torrent-card" data-id="${r.id}">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div class="flex-grow-1" style="min-width:0">
+          <div class="torrent-title">${escHtml(r.titolo)}</div>
+          <div class="torrent-desc">${escHtml(r.descrizione)}</div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+            <span class="badge-cat"><i class="bi bi-folder2 me-1"></i>${escHtml(r.categoria_nome)}</span>
+            <span class="badge-size"><i class="bi bi-hdd me-1"></i>${escHtml(r.dimensione_fmt)}</span>
+            <span class="badge-author"><i class="bi bi-person me-1"></i>${escHtml(r.autore)}</span>
+            <span class="badge-date"><i class="bi bi-calendar3 me-1"></i>${formatDate(r.data)}</span>
+          </div>
+        </div>
+        <div class="d-flex flex-column gap-1 align-items-end flex-shrink-0">
+          <div class="d-flex gap-1 align-items-center">
+            <button class="btn-star ${r.starred ? 'active' : ''}" title="${r.starred ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}"
+                    onclick="toggleStar(${r.id}, this)">
+              ${r.starred ? '★' : '☆'}
+            </button>
+            <button class="btn-downloaded ${r.downloaded ? 'active' : ''}" title="${r.downloaded ? 'Segna come non scaricato' : 'Segna come scaricato'}"
+                    onclick="toggleDownloaded(${r.id}, this)">
+              ${r.downloaded ? '✓' : '↓'}
+            </button>
+            <a class="btn-magnet" href="${escHtml(r.magnet)}" title="Apri con client torrent">
+              <i class="bi bi-magnet"></i>Magnet
+            </a>
+          </div>
+          <span style="font-size:.65rem;color:#555;word-break:break-all;max-width:160px">${r.hash.toLowerCase()}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('results').innerHTML = html;
+  renderPagination();
+}
+
+function renderPagination() {
+  const nav = document.getElementById('pag-nav');
+  const ul  = document.getElementById('pagination');
+  if (currentPages <= 1) { nav.style.display = 'none'; return; }
+  nav.style.display = '';
+
+  const maxButtons = 7;
+  let pages = [];
+  if (currentPages <= maxButtons) {
+    pages = Array.from({length: currentPages}, (_, i) => i + 1);
+  } else {
+    pages = [1];
+    let start = Math.max(2, currentPage - 2);
+    let end   = Math.min(currentPages - 1, currentPage + 2);
+    if (start > 2)              pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < currentPages - 1) pages.push('...');
+    pages.push(currentPages);
+  }
+
+  ul.innerHTML = `
+    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="search(${currentPage - 1});return false">‹</a>
+    </li>
+    ${pages.map(p => p === '...'
+      ? `<li class="page-item disabled"><span class="page-link">…</span></li>`
+      : `<li class="page-item ${p === currentPage ? 'active' : ''}">
+           <a class="page-link" href="#" onclick="search(${p});return false">${p}</a>
+         </li>`
+    ).join('')}
+    <li class="page-item ${currentPage === currentPages ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="search(${currentPage + 1});return false">›</a>
+    </li>
+  `;
+}
+
+async function search(page = 1) {
+  if (page < 1 || (currentPages > 0 && page > currentPages)) return;
+
+  const params = getParams();
+  params.page = page;
+
+  const qs = new URLSearchParams(params).toString();
+  document.getElementById('results').innerHTML = `
+    <div class="loading"><div class="spinner-border text-secondary" role="status"></div><br>Ricerca in corso...</div>`;
+  document.getElementById('results-info').textContent = 'Ricerca...';
+
+  // Update URL without reload
+  history.replaceState(null, '', `?${qs}`);
+
+  try {
+    const res = await fetch(`/api/search?${qs}`);
+    const data = await res.json();
+    renderResults(data);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    document.getElementById('results').innerHTML =
+      `<div class="empty text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Errore: ${err.message}</div>`;
+  }
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Enter key on search
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') search(1);
+});
+
+// Restore state from URL
+function restoreFromUrl() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('q'))        document.getElementById('q').value        = p.get('q');
+  if (p.get('cat'))      document.getElementById('cat').value      = p.get('cat');
+  if (p.get('sort') && p.get('order'))
+    document.getElementById('sortby').value = `${p.get('sort')}_${p.get('order')}`;
+  if (p.get('per_page')) document.getElementById('per_page').value = p.get('per_page');
+  if (p.get('view')) {
+    currentView = p.get('view');
+    document.querySelectorAll('#view-tabs .nav-link').forEach(el => {
+      el.classList.toggle('active', el.dataset.view === currentView);
+    });
+  }
+  return parseInt(p.get('page'), 10) || 1;
+}
+
+// Init
+(async () => {
+  await Promise.all([loadCategories(), loadStats()]);
+  const page = restoreFromUrl();
+  search(page);
+})();
+</script>
+</body>
+</html>

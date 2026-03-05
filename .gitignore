@@ -1,0 +1,19 @@
+# Database (generato automaticamente)
+*.db
+*.db-wal
+*.db-shm
+
+# Dump CSV (file sorgente, troppo grande per git)
+*.csv
+
+# Python virtualenv
+venv/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+.claude
