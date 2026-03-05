@@ -50,6 +50,20 @@ try { db.exec('ALTER TABLE releases ADD COLUMN downloaded INTEGER NOT NULL DEFAU
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_starred ON releases(starred)'); } catch {}
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_downloaded ON releases(downloaded)'); } catch {}
 
+// Saved searches table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS saved_searches (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    q        TEXT    NOT NULL DEFAULT '',
+    cat      TEXT    NOT NULL DEFAULT '',
+    sort     TEXT    NOT NULL DEFAULT 'data',
+    order_dir TEXT   NOT NULL DEFAULT 'desc',
+    view     TEXT    NOT NULL DEFAULT 'all',
+    total    INTEGER NOT NULL DEFAULT 0,
+    saved_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+  )
+`);
+
 const CATEGORIES = {
   1:  'Programmi TV Italiani',
   2:  'Musica Lossless',
@@ -290,6 +304,46 @@ const server = http.createServer((req, res) => {
     const newVal = row.downloaded ? 0 : 1;
     db.prepare('UPDATE releases SET downloaded = ? WHERE id = ?').run(newVal, id);
     sendJson(res, { downloaded: newVal });
+    return;
+  }
+
+  // Saved searches — list
+  if (req.method === 'GET' && pathname === '/api/saved-searches') {
+    const rows = db.prepare('SELECT * FROM saved_searches ORDER BY saved_at DESC').all();
+    const enriched = rows.map(r => ({
+      ...r,
+      cat_nome: r.cat ? (CATEGORIES[Number(r.cat)] || `Categoria ${r.cat}`) : '',
+    }));
+    sendJson(res, enriched);
+    return;
+  }
+
+  // Saved searches — save
+  if (req.method === 'POST' && pathname === '/api/saved-searches') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { q, cat, sort, order, view, total } = JSON.parse(body);
+        const result = db.prepare(`
+          INSERT INTO saved_searches (q, cat, sort, order_dir, view, total)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(q || '', cat || '', sort || 'data', order || 'desc', view || 'all', total || 0);
+        const saved = db.prepare('SELECT * FROM saved_searches WHERE id = ?').get(result.lastInsertRowid);
+        sendJson(res, { ...saved, cat_nome: saved.cat ? (CATEGORIES[Number(saved.cat)] || `Categoria ${saved.cat}`) : '' });
+      } catch (err) {
+        sendJson(res, { error: err.message }, 400);
+      }
+    });
+    return;
+  }
+
+  // Saved searches — delete
+  if (req.method === 'DELETE' && pathname.startsWith('/api/saved-searches/')) {
+    const id = parseInt(pathname.split('/').pop(), 10);
+    if (!id) { sendJson(res, { error: 'Invalid id' }, 400); return; }
+    db.prepare('DELETE FROM saved_searches WHERE id = ?').run(id);
+    sendJson(res, { ok: true });
     return;
   }
 

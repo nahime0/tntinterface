@@ -80,6 +80,23 @@
       color: #fff; border-bottom-color: var(--accent); background: transparent;
     }
     .nav-tabs-custom .badge { font-size: 0.65rem; vertical-align: middle; }
+    .saved-search-card {
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+      padding: 0.9rem 1.1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .saved-search-card:hover { border-color: var(--accent); background: #211a19; }
+    .saved-search-card .query { font-weight: 600; color: #fff; font-size: 0.95rem; word-break: break-word; }
+    .saved-search-card .query.empty-query { color: #888; font-style: italic; }
+    .saved-search-card .meta { font-size: 0.75rem; color: #666; margin-top: 0.35rem; }
+    .saved-search-card .count { font-size: 1.3rem; font-weight: 700; color: var(--accent); line-height: 1; }
+    .saved-search-card .count-label { font-size: 0.7rem; color: #666; }
+    .btn-delete-search {
+      position: absolute; top: 7px; right: 8px;
+      background: transparent; border: none; color: #444; font-size: 1rem;
+      cursor: pointer; padding: 2px 5px; border-radius: 4px; line-height: 1;
+    }
+    .btn-delete-search:hover { color: #e05; background: #2a1a1a; }
     .pagination { gap: 3px; }
     .page-link { background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa; border-radius: 6px !important; }
     .page-link:hover { background: #2a2a2a; color: #fff; border-color: #444; }
@@ -127,6 +144,12 @@
         <span class="badge ms-1" id="tab-count-downloaded" style="background:#0f2e0f;color:#4caf50">0</span>
       </button>
     </li>
+    <li class="nav-item">
+      <button class="nav-link" data-view="saved" onclick="switchView('saved')">
+        <i class="bi bi-bookmark-fill me-1" style="color:#7c9fff"></i>Ricerche salvate
+        <span class="badge ms-1" id="tab-count-saved" style="background:#0f1e3a;color:#7c9fff">0</span>
+      </button>
+    </li>
   </ul>
 
   <!-- Search bar -->
@@ -157,25 +180,39 @@
       </div>
       <div class="col-3 col-md-1">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-search w-100" onclick="search(1)">
-          <i class="bi bi-search"></i>
-        </button>
+        <div class="d-flex gap-1">
+          <button class="btn btn-search flex-grow-1" onclick="search(1)">
+            <i class="bi bi-search"></i>
+          </button>
+          <button class="btn" title="Ripulisci ricerca"
+                  style="background:#252525;border:1px solid #3a3a3a;color:#888;border-radius:8px;padding:0.5rem 0.6rem;"
+                  onclick="clearSearch()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Stats bar -->
-  <div class="stats-bar d-flex justify-content-between align-items-center mb-3">
+  <div class="stats-bar d-flex justify-content-between align-items-center mb-3" id="stats-bar">
     <span id="results-info">Caricamento...</span>
-    <span>
-      <label class="me-1" style="color:#888;font-size:.8rem;">Per pagina:</label>
-      <select id="per_page" class="form-select d-inline-block" style="width:auto;font-size:.8rem;padding:2px 6px;"
-              onchange="search(1)">
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
-    </span>
+    <div class="d-flex align-items-center gap-2">
+      <button id="btn-save-search" class="btn btn-sm"
+              style="display:none;background:#0f1e3a;border:1px solid #1e3a7a;color:#7c9fff;font-size:.78rem;border-radius:6px;"
+              onclick="saveSearch()">
+        <i class="bi bi-bookmark-plus me-1"></i>Salva ricerca
+      </button>
+      <span>
+        <label class="me-1" style="color:#888;font-size:.8rem;">Per pagina:</label>
+        <select id="per_page" class="form-select d-inline-block" style="width:auto;font-size:.8rem;padding:2px 6px;"
+                onchange="search(1)">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </span>
+    </div>
   </div>
 
   <!-- Results -->
@@ -185,6 +222,15 @@
   <nav id="pag-nav" class="mt-3" style="display:none">
     <ul class="pagination justify-content-center flex-wrap" id="pagination"></ul>
   </nav>
+
+  <!-- Saved searches section -->
+  <div id="saved-searches-section" style="display:none">
+    <div id="saved-searches-grid" class="row g-3"></div>
+    <div id="saved-searches-empty" class="empty" style="display:none">
+      <i class="bi bi-bookmark" style="font-size:2rem;display:block;margin-bottom:.5rem"></i>
+      Nessuna ricerca salvata. Effettua una ricerca e clicca <strong>Salva ricerca</strong>.
+    </div>
+  </div>
 
 </div>
 
@@ -203,12 +249,144 @@ async function loadStats() {
   document.getElementById('tab-count-downloaded').textContent = s.downloaded.toLocaleString('it');
 }
 
+async function loadSavedSearches() {
+  const res = await fetch('/api/saved-searches');
+  const searches = await res.json();
+  document.getElementById('tab-count-saved').textContent = searches.length;
+  renderSavedSearches(searches);
+}
+
+function renderSavedSearches(searches) {
+  const grid  = document.getElementById('saved-searches-grid');
+  const empty = document.getElementById('saved-searches-empty');
+  if (!searches.length) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = searches.map(s => {
+    const sortLabel = {
+      data_desc: 'Data ↓', data_asc: 'Data ↑',
+      titolo_asc: 'Titolo A→Z', titolo_desc: 'Titolo Z→A',
+      dimensione_desc: 'Dimensione ↓', dimensione_asc: 'Dimensione ↑',
+      autore_asc: 'Autore A→Z', autore_desc: 'Autore Z→A',
+    }[`${s.sort}_${s.order_dir}`] || s.sort;
+
+    const viewLabel = { all: '', starred: '★ Preferiti', downloaded: '✓ Scaricati' }[s.view] || '';
+
+    const tags = [
+      s.cat_nome ? `<span class="badge-cat">${escHtml(s.cat_nome)}</span>` : '',
+      viewLabel   ? `<span style="font-size:.72rem;color:#aaa">${viewLabel}</span>` : '',
+      `<span style="font-size:.72rem;color:#666">${sortLabel}</span>`,
+    ].filter(Boolean).join('');
+
+    return `
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="saved-search-card" onclick="applySearch(${s.id})">
+          <button class="btn-delete-search" title="Elimina" onclick="deleteSearch(event,${s.id})">✕</button>
+          <div class="query ${s.q ? '' : 'empty-query'}">${s.q ? escHtml(s.q) : 'Tutte le release'}</div>
+          <div class="d-flex gap-2 flex-wrap align-items-center mt-1">${tags}</div>
+          <div class="d-flex justify-content-between align-items-end mt-2">
+            <div>
+              <div class="count">${Number(s.total).toLocaleString('it')}</div>
+              <div class="count-label">risultati</div>
+            </div>
+            <div style="font-size:.7rem;color:#555;text-align:right">${s.saved_at.split(' ')[0]}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Cache for applying saved searches (id → params)
+const _savedCache = {};
+
+async function applySearch(id) {
+  // Fetch fresh to get params
+  const res = await fetch('/api/saved-searches');
+  const searches = await res.json();
+  const s = searches.find(x => x.id === id);
+  if (!s) return;
+
+  // Restore UI state
+  document.getElementById('q').value = s.q;
+  document.getElementById('cat').value = s.cat;
+  const sortbyVal = `${s.sort}_${s.order_dir}`;
+  const sortSel = document.getElementById('sortby');
+  if ([...sortSel.options].some(o => o.value === sortbyVal)) sortSel.value = sortbyVal;
+
+  // Switch to the right view tab
+  const view = s.view === 'starred' || s.view === 'downloaded' ? s.view : 'all';
+  currentView = view;
+  document.querySelectorAll('#view-tabs .nav-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+
+  // Show search sections, hide saved-searches section
+  document.getElementById('stats-bar').style.display              = '';
+  document.getElementById('results').style.display                = '';
+  document.getElementById('saved-searches-section').style.display = 'none';
+
+  search(1);
+}
+
+async function saveSearch() {
+  if (currentTotal === 0) return;
+  const params = getParams();
+  const btn = document.getElementById('btn-save-search');
+  btn.disabled = true;
+  try {
+    await fetch('/api/saved-searches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...params, total: currentTotal }),
+    });
+    // Flash feedback
+    btn.textContent = '✓ Salvata';
+    btn.style.color = '#4caf50';
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-bookmark-plus me-1"></i>Salva ricerca';
+      btn.style.color = '#7c9fff';
+      btn.disabled = false;
+    }, 1500);
+    loadSavedSearches();
+  } catch {
+    btn.disabled = false;
+  }
+}
+
+function clearSearch() {
+  document.getElementById('q').value       = '';
+  document.getElementById('cat').value     = '';
+  document.getElementById('sortby').value  = 'data_desc';
+  document.getElementById('btn-save-search').style.display = 'none';
+  search(1);
+}
+
+async function deleteSearch(e, id) {
+  e.stopPropagation();
+  await fetch(`/api/saved-searches/${id}`, { method: 'DELETE' });
+  loadSavedSearches();
+}
+
 function switchView(view) {
   currentView = view;
   document.querySelectorAll('#view-tabs .nav-link').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
   });
-  search(1);
+
+  const isSaved = view === 'saved';
+  document.getElementById('stats-bar').style.display              = isSaved ? 'none' : '';
+  document.getElementById('results').style.display                = isSaved ? 'none' : '';
+  document.getElementById('pag-nav').style.display                = isSaved ? 'none' : '';
+  document.getElementById('saved-searches-section').style.display = isSaved ? ''     : 'none';
+
+  if (isSaved) {
+    loadSavedSearches();
+  } else {
+    search(1);
+  }
 }
 
 async function toggleStar(id, btn) {
@@ -293,6 +471,15 @@ function renderResults(data) {
   const from = (currentPage - 1) * currentPerPage + 1;
   const to   = Math.min(currentPage * currentPerPage, currentTotal);
   info.innerHTML = `Risultati <strong style="color:#ccc">${from.toLocaleString('it')}–${to.toLocaleString('it')}</strong> di <strong style="color:var(--accent)">${currentTotal.toLocaleString('it')}</strong>`;
+
+  const saveBtn = document.getElementById('btn-save-search');
+  if (saveBtn) {
+    const hasQuery = !!document.getElementById('q').value.trim();
+    saveBtn.style.display = hasQuery ? '' : 'none';
+    saveBtn.innerHTML = '<i class="bi bi-bookmark-plus me-1"></i>Salva ricerca';
+    saveBtn.style.color = '#7c9fff';
+    saveBtn.disabled = false;
+  }
 
   const html = data.results.map(r => `
     <div class="torrent-card" data-id="${r.id}">
@@ -421,9 +608,13 @@ function restoreFromUrl() {
 
 // Init
 (async () => {
-  await Promise.all([loadCategories(), loadStats()]);
+  await Promise.all([loadCategories(), loadStats(), loadSavedSearches()]);
   const page = restoreFromUrl();
-  search(page);
+  if (currentView === 'saved') {
+    switchView('saved');
+  } else {
+    search(page);
+  }
 })();
 </script>
 </body>
